@@ -17,7 +17,7 @@ echo.
 echo  0.关闭Bat
 echo  1.当前时间
 echo  2.打开网易云音乐
-echo  3.测试延迟
+echo  3.测试延迟wreqewds
 echo  4.创建txt文本
 echo  5.文件夹操作
 
