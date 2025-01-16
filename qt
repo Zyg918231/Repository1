@@ -1,0 +1,35 @@
+1、 connet实现原理
+qt在调用connect函数后，在内存创建一个QObjectConnetctionListVecotr对象存储，通过信号的索引下标获取连接的connectionList对象，connectionlist内存储该信号的多个槽连接，信号触发后，会在内存内找到槽函数的地址，如果是qt::directconnect时，本质函数回调，
+如果连接方式是qt::queueconnect时，槽函数执行是通过抛出QmetaCallEvent时间，达到异步调用的效果
+
+2、static
+局部静态变量：存储在静态存储区，运行期间这个只会被初始化一次，生命周期是第一次初始化到程序结束
+全局静态变量：存储在静态存储区，作用域是声明它的文件内有效，生命周期是程序开始到结束
+类静态成员变量：类的所有对象共享，必须在类外初始化
+类静态成员函数：类的所有对象共享，不含this指针，不可在类中调用非静态成员
+
+3、指针和引用区别
+指针是一个变量，存储的是一个变量的地址， 引用是变量的别名，
+指针不必初始化，引用必须初始化，指针有多级，引用只有一级，指针初始化后可以改变，引用不能改变，sizeof引用是变量的大小，引用时指针的大小
+
+4、qt使用线程的几种方法
+1、继承QThread类，重写run()函数，只有run()函数会在子线程内执行
+2、movetothread方法，将需要在子线程内执行的工作定义成一个槽函数，再建立相关信号，连接信号与槽，启动thread的start函数，触发相关信号，对应的槽函数将在子线程内执行
+3、使用lamba表达式，QConnect将thread对象和lamba表达式连接起来
+
+5、qt的线程间同步方式
+QMutex:互斥、信号与槽机制、 读写锁、 条件变量、 信号量
+
+6、qt的进程间通信方式
+管道、 有名管道、信号量消息对垒、信号、共享内存、套接字
+
+7、简述tcp通信的流程
+服务器端：创建QTcpserver、监听端口、有连接到来处理newConneted信号获取QTcpSocket对象，发送数据使用write，触发readyread信号接收数据，close关闭套接字
+客户端：创建QTcpsocket对象，connettohost连接到服务器，连接成功后，通过write发送数据，触发readyread接收数据，close关闭套接字
+
+8、简述udp通信流程
+创建QUdpsocket对象，绑定端口，接收数据触发readyread信号，在槽函数读取数据，发送数据调用writedatagram函数
+
+9、qt使用线程池
+QThreadPool是一种预先创建一定数量的线程对象，放入池中，应用程序可以减少线程创建和销毁的开销，控制并发任务的数量
+使用线程池需要继承Qrunnable类，实现run方法，threadpoll通过start函数提交任务
