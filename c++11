@@ -1,0 +1,26 @@
+1、c++11新特性
+  nullptr代替null
+  引用auto和decltype两个关键字实现类型推导
+基于范围的for循环
+类的初始化列表
+lambda表达式
+右值引用
+智能指针
+线程和互斥锁
+新的表达式
+
+2、智能指针
+std::unique_ptr:是一种独占所有权的只能指针，同一时间只能有一个unique_ptr指向指定的对象，被销毁时，指向的对象也会被销毁
+std::shared_ptr:共享所有权的智能指针，对象的最后一个shared_ptr被销毁时，对象才会被销毁
+std::weakptr：需要和std::shared_ptr一起使用，不会增加引用计数
+
+3、constexpr表达式
+定义常量表达式，在编译时去确定值
+
+4、返回类型后置
+对于复杂的返回类型或者依赖参数的返回类型
+
+5、新的容器
+std::array：固定大小的数组rongqi
+std::forward_list:单项链表容器
+std::unorder_map:基于哈希表，查找速度更快
