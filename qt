@@ -33,3 +33,9 @@ QMutex:互斥、信号与槽机制、 读写锁、 条件变量、 信号量
 9、qt使用线程池
 QThreadPool是一种预先创建一定数量的线程对象，放入池中，应用程序可以减少线程创建和销毁的开销，控制并发任务的数量
 使用线程池需要继承Qrunnable类，实现run方法，threadpoll通过start函数提交任务
+
+
+https://github.com/ithewei/hplayer/blob/master/README.md
+https://www.cnblogs.com/leisure_chn/p/10429145.html
+https://lazybing.github.io/blog/2016/07/24/avi-parse-format/
+
