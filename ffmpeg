@@ -20,3 +20,7 @@ DTS：解码时间戳，使用视频解码的
 
 5、时间基
 timestamp(秒) = pts * av_q2d(time_base)　　#可以看出pts是以自己的时间基为间隔×pts
+
+
+https://www.cnblogs.com/leisure_chn/p/10035365.html
+https://www.cnblogs.com/ssyfj/p/14671862.html
