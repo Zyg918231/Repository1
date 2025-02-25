@@ -1,0 +1,235 @@
+设备树（Device Tree）是 Linux 内核中用于描述硬件配置的一种数据结构。它主要用于嵌入式系统，特别是在 ARM 架构中，用于将硬件的描述与内核代码分离。设备树使得同一内核可以支持多种硬件平台，而无需修改内核代码。
+
+以下是一个 Linux 设备树的入门教程，涵盖设备树的基本概念、语法、编写方法以及如何与驱动程序交互。
+
+1. 设备树的基本概念
+1.1 设备树的作用
+设备树用于描述硬件平台的配置信息，例如：
+
+CPU 类型
+
+内存布局
+
+外设（如 GPIO、I2C、SPI 等）的连接方式
+
+中断控制器和中断号
+
+时钟源
+
+1.2 设备树的组成
+设备树由以下部分组成：
+
+设备树源文件（DTS）：人类可读的文本文件，描述硬件。
+
+设备树二进制文件（DTB）：由 DTS 编译生成的二进制文件，内核在启动时加载。
+
+设备树绑定（Binding）：描述设备树节点如何与驱动程序交互的文档。
+
+1.3 设备树的核心概念
+节点（Node）：设备树的基本单位，表示一个设备或子系统。
+
+属性（Property）：节点的键值对，用于描述设备的配置。
+
+兼容性（Compatible）：用于匹配驱动程序的字符串。
+
+父节点和子节点：设备树是树形结构，节点可以有父子关系。
+
+2. 设备树语法
+2.1 设备树源文件（DTS）示例
+dts
+复制
+/dts-v1/;
+
+/ {
+    compatible = "mycompany,myboard";
+    model = "MyBoard";
+    #address-cells = <1>;
+    #size-cells = <1>;
+
+    cpus {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        cpu@0 {
+            compatible = "arm,cortex-a53";
+            device_type = "cpu";
+            reg = <0>;
+        };
+    };
+
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x80000000 0x20000000>; // 512MB RAM
+    };
+
+    gpio_keys {
+        compatible = "gpio-keys";
+        button_a {
+            label = "Button A";
+            gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
+            linux,code = <KEY_A>;
+        };
+    };
+};
+2.2 设备树语法详解
+/dts-v1/;：设备树版本声明。
+
+/ { ... };：根节点，所有其他节点都是它的子节点。
+
+compatible：用于匹配驱动程序的字符串。
+
+#address-cells 和 #size-cells：定义地址和大小字段的单元格数量。
+
+reg：描述设备的地址范围。
+
+gpios：描述 GPIO 引脚的连接方式。
+
+linux,code：用于输入子系统的键值。
+
+3. 设备树绑定（Binding）
+设备树绑定是描述设备树节点如何与驱动程序交互的文档。绑定文件通常位于内核源码的 Documentation/devicetree/bindings/ 目录下。
+
+例如，GPIO 按键的绑定文件可能如下：
+
+yaml
+复制
+# Documentation/devicetree/bindings/input/gpio-keys.yaml
+
+compatible: "gpio-keys"
+
+properties:
+  button_a:
+    type: object
+    properties:
+      label:
+        type: string
+      gpios:
+        type: phandle
+      linux,code:
+        type: integer
+    required:
+      - label
+      - gpios
+      - linux,code
+4. 设备树与驱动程序的交互
+驱动程序通过设备树获取硬件配置信息。以下是一个简单的 GPIO 按键驱动程序示例：
+
+4.1 驱动程序代码
+c
+复制
+#include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/gpio/consumer.h>
+#include <linux/input.h>
+
+#define DRIVER_NAME "gpio_keys"
+
+struct gpio_keys_data {
+    struct input_dev *input_dev;
+    struct gpio_desc *button;
+};
+
+static irqreturn_t gpio_keys_isr(int irq, void *dev_id)
+{
+    struct gpio_keys_data *data = dev_id;
+    int state = gpiod_get_value(data->button);
+
+    input_report_key(data->input_dev, KEY_A, !state);
+    input_sync(data->input_dev);
+
+    return IRQ_HANDLED;
+}
+
+static int gpio_keys_probe(struct platform_device *pdev)
+{
+    struct gpio_keys_data *data;
+    int irq, ret;
+
+    data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
+    if (!data)
+        return -ENOMEM;
+
+    data->button = devm_gpiod_get(&pdev->dev, NULL, GPIOD_IN);
+    if (IS_ERR(data->button))
+        return PTR_ERR(data->button);
+
+    data->input_dev = devm_input_allocate_device(&pdev->dev);
+    if (!data->input_dev)
+        return -ENOMEM;
+
+    data->input_dev->name = DRIVER_NAME;
+    set_bit(EV_KEY, data->input_dev->evbit);
+    set_bit(KEY_A, data->input_dev->keybit);
+
+    ret = input_register_device(data->input_dev);
+    if (ret)
+        return ret;
+
+    irq = gpiod_to_irq(data->button);
+    ret = devm_request_irq(&pdev->dev, irq, gpio_keys_isr,
+                           IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+                           DRIVER_NAME, data);
+    if (ret)
+        return ret;
+
+    platform_set_drvdata(pdev, data);
+    return 0;
+}
+
+static int gpio_keys_remove(struct platform_device *pdev)
+{
+    return 0;
+}
+
+static const struct of_device_id gpio_keys_of_match[] = {
+    { .compatible = "gpio-keys" },
+    { }
+};
+MODULE_DEVICE_TABLE(of, gpio_keys_of_match);
+
+static struct platform_driver gpio_keys_driver = {
+    .probe = gpio_keys_probe,
+    .remove = gpio_keys_remove,
+    .driver = {
+        .name = DRIVER_NAME,
+        .of_match_table = gpio_keys_of_match,
+    },
+};
+
+module_platform_driver(gpio_keys_driver);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Your Name");
+MODULE_DESCRIPTION("GPIO Keys Driver");
+4.2 设备树节点
+dts
+复制
+gpio_keys {
+    compatible = "gpio-keys";
+    button_a {
+        label = "Button A";
+        gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
+        linux,code = <KEY_A>;
+    };
+};
+5. 编译和加载设备树
+将设备树源文件保存为 myboard.dts。
+
+使用设备树编译器（DTC）编译 DTS 文件：
+
+bash
+复制
+dtc -I dts -O dtb -o myboard.dtb myboard.dts
+将生成的 myboard.dtb 文件加载到目标设备上。
+
+在内核启动时加载设备树：
+
+bash
+复制
+bootm <kernel> - <dtb>
+6. 参考资料
+Linux 内核设备树文档
+
+Device Tree Specification
+
+Linux 内核源码中的设备树绑定文档
